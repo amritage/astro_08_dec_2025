@@ -87,37 +87,82 @@ async function safeEmbedImage(pdf: PDFDocument, bytes: Uint8Array | null, hintEx
   }
 }
 
-/** Load logo bytes from env URL or from /public using the current request origin */
+/** Load logo bytes from local file system */
 async function fetchLogoBytes(origin: string): Promise<Uint8Array | null> {
-  const envUrl = (import.meta.env.PUBLIC_PDF_LOGO_URL || '').trim();
-  const candidates = [
-    envUrl && (/^https?:\/\//i.test(envUrl) ? envUrl : `${origin}${envUrl.startsWith('/') ? '' : '/'}${envUrl}`),
-    `${origin}/images/brand/age.jpg`,
-    `${origin}/images/brand/age.png`,
-    `${origin}/amrita.png`,
-  ].filter(Boolean) as string[];
-
-  for (const u of candidates) {
-    const b = await getBytes(u);
-    if (b) return b;
+  // Try to load from file system first (works in SSR)
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    const localPaths = [
+      'public/images/brand/age.jpg',
+      'public/images/brand/my_logo.png',
+      'public/apple-touch-icon.png',
+    ];
+    
+    for (const localPath of localPaths) {
+      try {
+        const fullPath = path.resolve(process.cwd(), localPath);
+        if (fs.existsSync(fullPath)) {
+          const buffer = fs.readFileSync(fullPath);
+          return new Uint8Array(buffer);
+        }
+      } catch {
+        continue;
+      }
+    }
+  } catch {
+    // File system not available, try HTTP
   }
+  
+  // Fallback to HTTP fetch from origin
+  const httpCandidates = [
+    `${origin}/images/brand/age.jpg`,
+    `${origin}/images/brand/my_logo.png`,
+    `${origin}/apple-touch-icon.png`,
+  ];
+  
+  for (const url of httpCandidates) {
+    try {
+      const bytes = await getBytes(url);
+      if (bytes) return bytes;
+    } catch {
+      continue;
+    }
+  }
+  
   return null;
 }
 
 function shapeProduct(p: any) {
+  // Format leadtime - handle both array and string
+  let leadtimeStr = '';
+  if (Array.isArray(p?.leadtime) && p.leadtime.length > 0) {
+    leadtimeStr = p.leadtime.join(', ');
+  } else if (p?.leadtime) {
+    leadtimeStr = String(p.leadtime);
+  }
+
   return {
     name: p?.name ?? 'Product',
     slug: p?.slug ?? '',
-    sku: p?.sku ?? p?.productIdentifier ?? '',
-    productdescription: p?.productdescription ?? p?.description ?? '',
-    img: p?.img,
+    sku: p?.sku ?? '',
+    fullProductDescription: p?.fullProductDescription ?? p?.productdescription ?? p?.description ?? '',
     image1: p?.image1,
     image2: p?.image2,
-    gsm: p?.gsm, oz: p?.oz, cm: p?.cm, inch: p?.inch,
+    image3: p?.image3,
+    gsm: p?.gsm, 
+    oz: p?.oz, 
+    cm: p?.cm, 
+    inch: p?.inch,
     content: p?.content?.name ?? p?.content ?? '',
     design: p?.design?.name ?? p?.design ?? '',
     subfinish: p?.subfinish?.name ?? p?.subfinish ?? '',
     substructure: p?.substructure?.name ?? p?.substructure ?? '',
+    motif: p?.motif?.name ?? p?.motif ?? '',
+    leadtime: leadtimeStr,
+    rating_value: p?.rating_value ?? 0,
+    rating_count: p?.rating_count ?? 0,
     colors: Array.isArray(p?.color) ? p.color.map((c:any)=> c?.name || c).filter(Boolean).join(', ')
            : (p?.colors || ''),
   };
@@ -166,8 +211,8 @@ export const GET: APIRoute = async ({ params, request }) => {
   const email          = toWinAnsiSafe(office?.companyEmail ?? '');
   const website        = toWinAnsiSafe(office?.companyWebsite ?? '');
 
-  // Images
-  const candidates = [shaped.img, shaped.image1, shaped.image2].filter(Boolean) as string[];
+  // Images - prioritize image3 (main), then image1, image2
+  const candidates = [shaped.image3, shaped.image1, shaped.image2].filter(Boolean) as string[];
   const imageUrls: string[] = [];
   for (const raw of candidates) {
     const u = cloudinaryToJpeg(raw) ?? '';
@@ -177,7 +222,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
   /* ===== Build PDF ===== */
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595, 842]);   // A4
+  const page = pdf.addPage([595, 680]);   // Custom compact size
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
@@ -185,45 +230,87 @@ export const GET: APIRoute = async ({ params, request }) => {
   const pageH = page.getHeight();
   const { left, contentWidth } = pageMargins(pageW);
 
-  /* ---------- HEADER: logo + centered brand + twin blue/gold rules ---------- */
+  /* ---------- HEADER: company name (right) + logo (left between lines) ---------- */
   const origin = new URL(request.url).origin;
-  const logoBytes = await fetchLogoBytes(origin);
-
-  // Brand text
-  const brandTitle = (companyName || 'Amrita Global Enterprises').toUpperCase();
-  const titleSize = 16;
-  const titleW = fontBold.widthOfTextAtSize(brandTitle, titleSize);
-  const titleY = pageH - 60;
-
-  // Logo (left), robust embed
-  if (logoBytes) {
-    const logoImg = await safeEmbedImage(pdf, logoBytes); // sniff & embed
-    if (logoImg) {
-      const Lw = 44, Lh = 44;
-      page.drawImage(logoImg, { x: left - 10, y: pageH - 62, width: Lw, height: Lh });
+  
+  // Load logo directly from file system
+  let logoBytes: Uint8Array | null = null;
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const logoPath = path.resolve(process.cwd(), 'public/images/brand/age.jpg');
+    if (fs.existsSync(logoPath)) {
+      const buffer = fs.readFileSync(logoPath);
+      logoBytes = new Uint8Array(buffer);
     }
+  } catch (e) {
+    console.error('Failed to load logo from file system:', e);
+    // Fallback to HTTP
+    logoBytes = await fetchLogoBytes(origin);
   }
 
+  const headerY = pageH - 38;
+  const logoSize = 50;
+  
+  // Brand text (right side, above lines)
+  const brandTitle = (companyName || 'Amrita Global Enterprises').toUpperCase();
+  const titleSize = 18;
+  const titleW = fontBold.widthOfTextAtSize(brandTitle, titleSize);
+  const { right } = pageMargins(pageW);
   page.drawText(brandTitle, {
-    x: (pageW - titleW) / 2,
-    y: titleY,
+    x: pageW - right - titleW,
+    y: headerY + 16,
     size: titleSize,
     font: fontBold,
     color: COL.blue,
   });
+  
+  // Full-width horizontal lines
+  const lineY = headerY;
+  page.drawRectangle({ x: 0, y: lineY, width: pageW, height: 3, color: COL.gold });
+  page.drawRectangle({ x: 0, y: lineY - 5, width: pageW, height: 2, color: COL.blue });
 
-  // Blue + gold bars (full width)
-  const blueY = titleY - 12;
-  page.drawRectangle({ x: 0, y: blueY, width: pageW, height: 4, color: COL.blue });
-  page.drawRectangle({ x: 0, y: blueY - 6, width: pageW, height: 6, color: COL.gold });
+  // Logo on left (overlapping the lines, centered vertically)
+  // Note: WEBP not supported by pdf-lib, so we skip logo for now
+  // You can convert your logo to PNG/JPG and update the URL in fetchLogoBytes
+  if (logoBytes) {
+    try {
+      const format = sniffFormat(logoBytes);
+      let logoImg = null;
+      
+      if (format === 'jpg') {
+        logoImg = await pdf.embedJpg(logoBytes);
+      } else if (format === 'png') {
+        logoImg = await pdf.embedPng(logoBytes);
+      } else {
+        // Try both formats
+        try {
+          logoImg = await pdf.embedPng(logoBytes);
+        } catch {
+          try {
+            logoImg = await pdf.embedJpg(logoBytes);
+          } catch (e) {
+            console.error('Logo format not supported (WEBP?). Convert to PNG/JPG:', e);
+          }
+        }
+      }
+      
+      if (logoImg) {
+        const logoY = lineY - (logoSize / 2) + 1;
+        page.drawImage(logoImg, { x: left, y: logoY, width: logoSize, height: logoSize });
+      }
+    } catch (err) {
+      console.error('Logo embedding error:', err);
+    }
+  }
 
-  let y = blueY - 20;
+  let y = lineY - 28;
 
   /* --- Images: main (60%) + two thumbs (40%) --- */
-  const mainW = contentWidth * 0.60;
-  const mainH = 184;
-  const sideW = contentWidth * 0.40 - 16;
-  const sideH = 88;
+  const mainW = contentWidth * 0.58;
+  const mainH = 120;
+  const sideW = contentWidth * 0.42 - 10;
+  const sideH = 55;
 
   if (imageUrls.length) {
     page.drawRectangle({ x:left, y:y - mainH, width:mainW, height:mainH, color: COL.panel, borderColor: COL.border, borderWidth: 1 });
@@ -242,8 +329,8 @@ export const GET: APIRoute = async ({ params, request }) => {
     const extras = imageUrls.slice(1,3);
     for (let i=0; i<2; i++) {
       const ex = extras[i];
-      const x = left + mainW + 16;
-      const yy = y - (i * (sideH + 16));
+      const x = left + mainW + 10;
+      const yy = y - (i * (sideH + 10));
       page.drawRectangle({ x, y: yy - sideH, width: sideW, height: sideH, color: COL.panel, borderColor: COL.border, borderWidth: 1 });
 
       if (ex) {
@@ -256,7 +343,7 @@ export const GET: APIRoute = async ({ params, request }) => {
         }
       }
     }
-    y -= (mainH + 24);
+    y -= (mainH + 18);
   } else {
     page.drawRectangle({ x:left, y:y - 110, width:contentWidth, height:110, color: COL.panel, borderColor: COL.border, borderWidth: 1 });
     page.drawText('No images available', { x:left + 12, y: y - 64, size: 12, font, color: COL.ink2 });
@@ -264,116 +351,141 @@ export const GET: APIRoute = async ({ params, request }) => {
   }
 
   /* --- Product title bar --- */
-  const barH = 28;
+  const barH = 26;
   page.drawRectangle({ x: left, y: y - barH, width: contentWidth, height: barH, color: COL.blue });
   page.drawText(toWinAnsiSafe(shaped.name || 'Product'), {
-    x: left + 12, y: y - barH + 8, size: 16, font: fontBold, color: COL.white,
+    x: left + 12, y: y - barH + 8, size: 14, font: fontBold, color: COL.white,
   });
   const skuText = shaped.sku ? `SKU: ${toWinAnsiSafe(shaped.sku)}` : '';
   if (skuText) {
-    const w = font.widthOfTextAtSize(skuText, 12);
-    page.drawText(skuText, { x: left + contentWidth - w - 12, y: y - barH + 8, size: 12, font, color: COL.white });
+    const w = font.widthOfTextAtSize(skuText, 11);
+    page.drawText(skuText, { x: left + contentWidth - w - 12, y: y - barH + 8, size: 11, font, color: COL.white });
   }
-  y -= (barH + 18);
-
-  /* --- Measurements table --- */
-  const tW = contentWidth * 0.80;
-  const colW = tW / 4;
-  const tX = left + (contentWidth - tW)/2;
-  const headerH = 24;
-  const cellH = 24;
-
-  page.drawRectangle({ x:tX, y:y - (headerH + cellH), width:tW, height:(headerH + cellH), color: COL.white, borderColor: COL.border, borderWidth: 1 });
-  for (let i=1; i<4; i++) {
-    const x = tX + i*colW;
-    page.drawLine({ start:{x, y:y}, end:{x, y:y - (headerH + cellH)}, thickness: 0.6, color: COL.line });
-  }
-  page.drawLine({ start:{x:tX, y:y - headerH}, end:{x:tX + tW, y:y - headerH}, thickness: 0.6, color: COL.line });
-
-  const labels = ['GSM','OZ','CM','INCH'];
-  const vals = [shaped.gsm ?? '—', shaped.oz ?? '—', shaped.cm ?? '—', shaped.inch ?? '—'];
-  for (let i=0; i<4; i++) {
-    const cx = tX + i*colW + 6;
-    page.drawText(labels[i], { x: cx, y: y - 16, size: 12, font: fontBold, color: COL.ink2 });
-    page.drawText(String(vals[i]), { x: cx, y: y - headerH - 16, size: 12, font, color: COL.ink });
-  }
-  y -= (headerH + cellH + 20);
+  y -= (barH + 16);
 
   /* --- Product Specifications --- */
   page.drawText('Product Specifications:', { x:left, y, size: 12, font: fontBold, color: COL.blue });
   y -= 16;
 
+  // Build weight string
+  const weightParts = [];
+  if (shaped.gsm) weightParts.push(`${shaped.gsm} gsm`);
+  if (shaped.oz) weightParts.push(`${shaped.oz} oz`);
+  const weightStr = weightParts.length > 0 ? weightParts.join(' / ') : '—';
+
+  // Build width string
+  const widthParts = [];
+  if (shaped.cm) widthParts.push(`${shaped.cm} cm`);
+  if (shaped.inch) widthParts.push(`${shaped.inch} inch`);
+  const widthStr = widthParts.length > 0 ? widthParts.join(' / ') : '—';
+
   const specs: [string,string][] = [
     ['Content', toWinAnsiSafe(shaped.content || '—')],
-    ['Design', toWinAnsiSafe(shaped.design || '—')],
+    ['Weight', toWinAnsiSafe(weightStr)],
+    ['Width', toWinAnsiSafe(widthStr)],
     ['Finish', toWinAnsiSafe(shaped.subfinish || '—')],
+    ['Design', toWinAnsiSafe(shaped.design || '—')],
+    ['Motif', toWinAnsiSafe(shaped.motif || 'None/ NA')],
     ['Structure', toWinAnsiSafe(shaped.substructure || '—')],
     ['Colors', toWinAnsiSafe(shaped.colors || '—')],
+    ['Lead time', shaped.leadtime || '—'],
   ];
 
-  const gap = 18;
-  const half = (contentWidth - gap) / 2;
+  const specGap = 20;
+  const half = (contentWidth - specGap) / 2;
   let rowY = y;
   for (let i=0; i<specs.length; i++) {
     const [label, value] = specs[i];
-    const colX = i % 2 === 0 ? left : left + half + gap;
-    if (i % 2 !== 0) rowY -= 20;
+    const colX = i % 2 === 0 ? left : left + half + specGap;
+    if (i % 2 !== 0) rowY -= 18;
 
-    page.drawText(label + ':', { x: colX, y: rowY, size: 11, font: fontBold, color: COL.ink2 });
-    page.drawText(value, { x: colX + 64, y: rowY, size: 11, font, color: COL.ink });
+    page.drawText(label + ':', { x: colX, y: rowY, size: 10, font: fontBold, color: COL.ink2 });
+    page.drawText(value, { x: colX + 60, y: rowY, size: 10, font, color: COL.ink });
   }
-  y = rowY - 26;
+  y = rowY - 20;
+
+  /* --- Rating & Reviews --- */
+  if (shaped.rating_value > 0 || shaped.rating_count > 0) {
+    page.drawLine({ start:{x:left, y:y}, end:{x:left + contentWidth, y:y}, thickness: 0.8, color: COL.line, dashArray: [3, 3] });
+    y -= 12;
+
+    const rating = Math.round(shaped.rating_value);
+    const ratingText = `${rating}/5`;
+    
+    page.drawText('Rating:', { x: left, y, size: 10, font: fontBold, color: COL.ink2 });
+    page.drawText(ratingText, { x: left + 45, y, size: 11, font: fontBold, color: rgb(0.96, 0.62, 0.04) });
+    
+    if (shaped.rating_count > 0) {
+      page.drawText('Reviews:', { x: left + 100, y, size: 10, font: fontBold, color: COL.ink2 });
+      page.drawText(String(shaped.rating_count), { x: left + 150, y, size: 10, font, color: COL.ink });
+    }
+    
+    y -= 12;
+    page.drawLine({ start:{x:left, y:y}, end:{x:left + contentWidth, y:y}, thickness: 0.8, color: COL.line, dashArray: [3, 3] });
+    y -= 12;
+  }
 
   /* --- Description --- */
-  const rawDesc = shaped.productdescription ? toWinAnsiSafe(shaped.productdescription) : '';
+  const rawDesc = shaped.fullProductDescription ? toWinAnsiSafe(shaped.fullProductDescription) : '';
   if (rawDesc) {
     page.drawText('Description:', { x:left, y, size: 12, font: fontBold, color: COL.blue });
     y -= 16;
 
-    const maxW = contentWidth, size = 11, lh = 14;
-    const words = rawDesc.replace(/\s+/g,' ').trim().split(' ');
+    const maxW = contentWidth, size = 10, lh = 14;
+    // Strip HTML tags for PDF
+    const cleanDesc = rawDesc.replace(/<[^>]*>/g, '').replace(/\s+/g,' ').trim();
+    const words = cleanDesc.split(' ');
     let line = '';
     for (const w of words) {
       const test = line ? `${line} ${w}` : w;
       if (font.widthOfTextAtSize(test, size) > maxW && line) {
         page.drawText(line, { x:left, y, size, font, color: COL.ink });
-        line = w; y -= lh; if (y < 110) break;
+        line = w; y -= lh; if (y < 90) break;
       } else line = test;
     }
-    if (y >= 110 && line) { page.drawText(line, { x:left, y, size, font, color: COL.ink }); y -= lh; }
+    if (y >= 90 && line) { page.drawText(line, { x:left, y, size, font, color: COL.ink }); y -= lh; }
   }
 
   /* --- Footer --- */
-  const footerBase = 34;
-  if (companyAddress) page.drawText(companyAddress, { x:left, y: footerBase + 44, size:10, font, color: COL.ink2 });
+  const footerBase = 38;
+  
+  // Gold and blue lines (matching header)
+  page.drawRectangle({ x: 0, y: footerBase + 44, width: pageW, height: 3, color: COL.gold });
+  page.drawRectangle({ x: 0, y: footerBase + 41, width: pageW, height: 2, color: COL.blue });
+  
+  // Address in gold (with more space from line)
+  if (companyAddress) {
+    page.drawText(companyAddress, { x:left, y: footerBase + 30, size:11, font: fontBold, color: COL.gold });
+  }
 
+  // All contact info on one line horizontally
   const contacts: string[] = [];
   if (phone1) contacts.push(`Phone: ${phone1}`);
-  if (phone2) contacts.push(phone2);
-  if (wa)     contacts.push(`WhatsApp: ${wa}`);
-  if (email)  contacts.push(`Email: ${email}`);
-
-  let cx = left;
-  for (let i=0; i<contacts.length; i++) {
-    const t = contacts[i];
-    page.drawText(t, { x: cx, y: footerBase + 28, size:10, font, color: COL.ink2 });
-    cx += font.widthOfTextAtSize(t, 10) + 10;
-    if (i < contacts.length - 1) {
-      page.drawText('|', { x: cx, y: footerBase + 28, size:10, font, color: COL.ink2 });
-      cx += 8;
+  if (phone2) contacts.push(`+${phone2}`);
+  if (email) contacts.push(`Email: ${email}`);
+  
+  if (contacts.length > 0) {
+    let cx = left;
+    for (let i=0; i<contacts.length; i++) {
+      const t = contacts[i];
+      page.drawText(t, { x: cx, y: footerBase + 18, size:10, font, color: COL.gold });
+      cx += font.widthOfTextAtSize(t, 10) + 8;
+      if (i < contacts.length - 1) {
+        page.drawText('|', { x: cx, y: footerBase + 18, size:10, font, color: COL.gold });
+        cx += 10;
+      }
     }
   }
 
-  if (website) {
-    const clean = website.replace(/^https?:\/\//, '').replace(/\/$/,'');
-    page.drawText(`Website: ${clean}`, { x:left, y: footerBase + 12, size:10, font, color: COL.ink2 });
-  }
-
+  // Thank you message in gold (centered)
   const thanks = 'Thank you for your interest in our products!';
   const dateStr = new Date().toLocaleDateString();
   const midX = left + contentWidth / 2;
-  page.drawText(thanks, { x: midX - font.widthOfTextAtSize(thanks, 10)/2, y: footerBase - 4, size:10, font, color: COL.ink2 });
-  page.drawText(dateStr, { x: midX - font.widthOfTextAtSize(dateStr, 8)/2, y: footerBase - 18, size:8, font, color: rgb(0.53,0.58,0.67) });
+  page.drawText(thanks, { x: midX - fontBold.widthOfTextAtSize(thanks, 12)/2, y: footerBase + 2, size:12, font: fontBold, color: COL.gold });
+  
+  // Date in lighter gold
+  const dateColor = rgb(0.72, 0.63, 0.44); // #B8A06F
+  page.drawText(dateStr, { x: midX - font.widthOfTextAtSize(dateStr, 9)/2, y: footerBase - 12, size:9, font, color: dateColor });
 
   /* --- Send response --- */
   const bytes = await pdf.save();

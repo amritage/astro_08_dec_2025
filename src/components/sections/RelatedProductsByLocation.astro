@@ -683,18 +683,7 @@ const getLocationBadgeClass = (product: ProcessedProduct) => {
         )}
 
         {/* Location note */}
-        <div class="location-note">
-          <p>
-            <strong>Smart Sorting:</strong>
-            {!hasInSegment
-              ? ` Products from ${priorityCity}, ${priorityState} shown first for faster delivery to your location. `
-              : ` Products sorted by proximity to your selected location. `}
-            <strong>Country Filter:</strong> Only showing products
-            available in <strong>{targetCountry}</strong>.
-            {showLoadMore &&
-              ` Showing ${MAX_INITIAL_VISIBLE} of ${totalProducts} products.`}
-          </p>
-        </div>
+        
       </Fragment>
     )}
   </div>

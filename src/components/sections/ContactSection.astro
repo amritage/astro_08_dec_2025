@@ -506,7 +506,8 @@ const ADMIN_EMAIL_HEADER = import.meta.env.PUBLIC_ADMIN_EMAIL_HEADER ?? "x-admin
     .step-dot.is-completed { background: var(--success); border-color: var(--success); color: white; }
     .step-connector { flex: 1; height: 2px; background: var(--border-medium); margin: 0 8px; position: relative; top: -16px; }
     .step-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); text-align: center; } /* ← changed from --text-muted */
-    .step-dot.is-active + .step-label { color: var(--brand-primary); font-weight: 600; }
+    .step-item:has(.step-dot.is-active) .step-label { color: var(--brand-primary); font-weight: 600; }
+    .step-item:has(.step-dot.is-completed) .step-label { color: var(--success); font-weight: 600; }
 
     /* Form Elements */
     .step-legend { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 20px; padding: 0; }
