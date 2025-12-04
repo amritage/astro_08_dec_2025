@@ -54,7 +54,7 @@ const hqAddress = officeInfo?.companyAddress ?? fallbackAddress;
 const hqAddressParts = hqAddress.split(',').map((p: string) => p.trim());
 const hqAddressMapHref = `https://maps.google.com/?q=${encodeURIComponent(hqAddress)}`;
 
-/* Social links from API */
+/* Social links from API (Twitter URL shown on X icon) */
 const apiSocialsRaw: Social[] = [
   officeInfo?.facebook && {
     id: 'facebook-api',
@@ -75,10 +75,10 @@ const apiSocialsRaw: Social[] = [
     link: officeInfo.linkedin,
   },
   officeInfo?.twitter && {
-    id: 'twitter-api',
+    id: 'x-api',
     label: 'X (Twitter)',
     icon: 'x',
-    link: officeInfo.twitter,
+    link: officeInfo.twitter,        // <— your Twitter URL, opened by X icon
   },
   officeInfo?.youtube && {
     id: 'youtube-api',
@@ -251,7 +251,6 @@ const year = new Date().getFullYear();
                       <path d="M22 16.92v2a2 2 0 0 1-2.18 2 19.84 19.84 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.15 12.8 19.84 19.84 0 0 1 .08 4.18 2 2 0 0 1 2.06 2h2a2 2 0 0 1 2 1.72c.12.86.34 1.7.66 2.5a2 2 0 0 1-.45 2.11L5.4 9.91a16 16 0 0 0 8.69 8.69l1.58-1.87a2 2 0 0 1 2.11-.45c.8.32 1.64.54 2.5.66A2 2 0 0 1 22 16.92z"/>
                     </svg>
                   </span>
-                  <!-- PHONE FROM API (whatsappNumber or companyPhone1) -->
                   <a
                     class="age-talkLink"
                     href={`tel:${whatsappNumber || companyPhone1}`}
@@ -267,7 +266,6 @@ const year = new Date().getFullYear();
                       <path d="m22 6-10 7L2 6"/>
                     </svg>
                   </span>
-                  <!-- EMAIL FROM API -->
                   <a class="age-talkLink" href={`mailto:${companyEmail}`}>
                     {companyEmail}
                   </a>
@@ -513,7 +511,6 @@ const year = new Date().getFullYear();
       transition:color 0.3s ease;
     }
 
-    /* Slight tweak when inside the left address board so padding/margins fit its card layout */
     .age-addressBoard .age-addrLink{
       margin:-4px -8px;
       padding:6px 8px;
