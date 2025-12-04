@@ -1,23 +1,26 @@
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import vercel from '@astrojs/vercel';
+import vercel from '@astrojs/vercel/serverless'; // ⬅️ SSR adapter
 
 export default defineConfig({
   devToolbar: { enabled: false },
 
-  site: 'https://astro-landing-page-rho.vercel.app', // ✅ add this
+  // use your real deployed domain here
+  site: 'https://astro21-ten.vercel.app',
 
+  // ⬅️ full SSR, no static HTML baked
   output: 'server',
-  prerender: false,
+
+  // no prerender / ISR needed in pure SSR mode
   trailingSlash: 'ignore',
 
-  adapter: vercel({
-    isr: { expiration: 60 * 60 },
-  }),
- build: {
-    // ✅ safest for your current setup of big per-section <style> blocks
-    inlineStylesheets: 'auto', // 'auto' | 'always' | 'never'
+  adapter: vercel(),   // ⬅️ no isr here
+
+  build: {
+    // safest for your big in-component <style> blocks
+    inlineStylesheets: 'auto',
   },
+
   integrations: [react()],
 });
