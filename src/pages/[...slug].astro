@@ -12,7 +12,7 @@ import RelatedProductsByLocation from "../components/sections/RelatedProductsByL
 import OverviewSection from "../components/sections/OverviewSection.astro";
 import StickyContactModal from "../components/StickyContactModal.astro";
 import CommitmentText from "../components/sections/CommitmentText.astro";
-import CityProductHero from "../components/sections/CityProductHero.astro";
+import CityProductHero from "../components/sections/CityProductHero.astro"];
 import ProductHeroBySlug from "../components/sections/ProductHeroBySlug.astro";
 import MarketAreaModal from "../components/MarketAreaModal.astro";
 import HeadSEO from "../components/HeadSEO.astro";
@@ -444,6 +444,15 @@ const structuredData = (() => {
     productNode?.rating_count ?? seoDoc?.rating_count,
   );
 
+  // ✅ NEW: always choose an image for the Product schema
+  const imageUrl =
+    seoDoc?.ogImage ||
+    productNode?.ogImage_twitterimage ||
+    productNode?.image1 ||
+    productNode?.image2 ||
+    productNode?.image3 ||
+    "/images/placeholder-800x600.svg";
+
   const organizationLd = company.name
     ? {
         "@context": "https://schema.org",
@@ -487,7 +496,8 @@ const structuredData = (() => {
               name: company.name,
             }
           : undefined,
-        image: seoDoc?.ogImage ? [String(seoDoc.ogImage)] : undefined,
+        // ✅ now ALWAYS present
+        image: [String(imageUrl)],
         // OFFERS: uses salesPrice from Product (or seoDoc)
         offers:
           priceNum !== undefined
