@@ -371,6 +371,13 @@ const cleanText = (value: any) => {
 
 const cleanPhone = (value: string) => value.replace(/[^\d+]/g, "");
 
+// safely convert anything to a finite number (or undefined)
+const asNumber = (v: any) => {
+  if (v === null || v === undefined) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 /* ========= Company info (for JSON-LD) ========= */
 type OfficeInfo = {
   companyName?: string;
@@ -426,6 +433,17 @@ const structuredData = (() => {
     cleanText(seoDoc?.excerpt) ||
     cleanText(seoDoc?.productdescription);
 
+  // Prefer fields from the actual Product document (seoDoc.product), fallback to seoDoc
+  const productNode: any = seoDoc?.product ?? null;
+
+  const priceNum = asNumber(productNode?.salesPrice ?? seoDoc?.salesPrice);
+  const ratingValueNum = asNumber(
+    productNode?.rating_value ?? seoDoc?.rating_value,
+  );
+  const ratingCountNum = asNumber(
+    productNode?.rating_count ?? seoDoc?.rating_count,
+  );
+
   const organizationLd = company.name
     ? {
         "@context": "https://schema.org",
@@ -470,23 +488,24 @@ const structuredData = (() => {
             }
           : undefined,
         image: seoDoc?.ogImage ? [String(seoDoc.ogImage)] : undefined,
+        // OFFERS: uses salesPrice from Product (or seoDoc)
         offers:
-          typeof seoDoc?.salesPrice === "number"
+          priceNum !== undefined
             ? {
                 "@type": "Offer",
                 priceCurrency: "INR",
-                price: seoDoc.salesPrice,
+                price: priceNum,
                 availability: "https://schema.org/InStock",
                 url: canonicalUrl,
               }
             : undefined,
+        // AGGREGATE RATING: uses rating_value / rating_count from Product (or seoDoc)
         aggregateRating:
-          typeof seoDoc?.rating_value === "number" &&
-          typeof seoDoc?.rating_count === "number"
+          ratingValueNum !== undefined && ratingCountNum !== undefined
             ? {
                 "@type": "AggregateRating",
-                ratingValue: seoDoc.rating_value,
-                reviewCount: seoDoc.rating_count,
+                ratingValue: ratingValueNum,
+                reviewCount: ratingCountNum,
               }
             : undefined,
       }
@@ -561,7 +580,6 @@ const structuredDataJson = structuredData
     ))}
   </Fragment>
 
-  {/* rest of your layout content exactly as before */}
   {isMarketAreaModalPath ? null : (
     <Fragment>
       {isCityPage ? (
