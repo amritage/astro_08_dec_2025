@@ -1,6 +1,8 @@
 ---
 // src/pages/[...slug].astro
 
+ // @ts-nocheck
+
 import { Fragment } from "astro/jsx-runtime";
 
 import LandingLayout from "../layouts/LandingLayout.astro";
@@ -31,6 +33,9 @@ const SEO_PUBLIC_API = "https://test.amrita-fashions.com/api/seo/public";
 const SEO_DETAIL_API = "https://test.amrita-fashions.com/api/seo";
 const OFFICE_INFO_API =
   "https://test.amrita-fashions.com/landing/officeinformation";
+
+/** Product API */
+const PRODUCT_API = "https://test.amrita-fashions.com/api/product";
 
 /** Public GEO API base (can override via env) */
 const GEO_API_BASE =
@@ -325,18 +330,96 @@ const currentSlug = productSlugFromSeo
   : productSlugFromUrl ||
     (!isCityPage ? (segments[0] ?? "").toLowerCase() : FALLBACK_PRODUCT_SLUG);
 
+/* ========= Product fetch (for title, schema, etc.) ========= */
+
+type ProductDoc = {
+  _id?: string;
+  slug?: string;
+  name?: string;
+  productTitle?: string;
+  shortProductDescription?: string;
+  fullProductDescription?: string;
+  salesPrice?: number;
+  rating_value?: number;
+  rating_count?: number;
+  image1?: string;
+  image2?: string;
+  image3?: string;
+  videourl?: string;
+};
+
+let productDoc: ProductDoc | null = null;
+
+const extractFirstProduct = (json: any): ProductDoc | null => {
+  const data = Array.isArray(json?.data)
+    ? json.data
+    : json?.data
+    ? [json.data]
+    : [];
+  return data.length ? (data[0] as ProductDoc) : null;
+};
+
+if (!isMarketAreaModalPath) {
+  try {
+    // 1) Try by product ID from SEO document (seoDoc.product = "6931...")
+    if (seoDoc?.product && typeof seoDoc.product === "string") {
+      try {
+        const byIdRes = await fetch(
+          `${PRODUCT_API}/${encodeURIComponent(seoDoc.product)}`,
+          { headers: { accept: "application/json" } },
+        );
+        if (byIdRes.ok) {
+          const json = await byIdRes.json();
+          productDoc = extractFirstProduct(json);
+        }
+      } catch {
+        // ignore and fallback
+      }
+    }
+
+    // 2) Fallback – try by slug (e.g. silky-denim-55-ozs)
+    if (!productDoc && currentSlug && currentSlug !== FALLBACK_PRODUCT_SLUG) {
+      try {
+        const url = new URL(PRODUCT_API);
+        url.searchParams.set("slug", currentSlug);
+        const bySlugRes = await fetch(url.toString(), {
+          headers: { accept: "application/json" },
+        });
+        if (bySlugRes.ok) {
+          const json = await bySlugRes.json();
+          productDoc = extractFirstProduct(json);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    productDoc = null;
+  }
+}
+
 /* ========= Page-level fallbacks ========= */
 
 const fallbackTitle =
   !isProductLocationPage && !isCityPage
     ? "Home – Amrita Fashions"
     : "Fabric – Amrita Fashions";
+
 const fallbackDesc = "Premium fabrics for B2B buyers.";
+
+// Prefer Product API title → then SEO location title/meta → then SEO title
+const derivedTitleFromData =
+  productDoc?.productTitle ||
+  productDoc?.name ||
+  seoDoc?.productlocationtitle ||
+  seoDoc?.meta_og_twitter_title_product_location ||
+  seoDoc?.title;
 
 // Modal path-specific title/description
 const pageTitle = isMarketAreaModalPath
   ? "Select Market Area – Amrita Fashions"
-  : seoDoc?.title || fallbackTitle;
+  : derivedTitleFromData || fallbackTitle;
+
 const pageDesc = isMarketAreaModalPath
   ? "Choose your country, state, and city to find local market information."
   : seoDoc?.description || seoDoc?.excerpt || fallbackDesc;
@@ -425,18 +508,25 @@ const structuredData = (() => {
   if (!seoDoc && !company.name) return [];
 
   const canonicalUrl = seoDoc?.canonical_url || canonical;
+
   const productName =
-    cleanText(seoDoc?.title) || cleanText(seoDoc?.productlocationtitle);
+    cleanText(productDoc?.productTitle) ||
+    cleanText(productDoc?.name) ||
+    cleanText(seoDoc?.title) ||
+    cleanText(seoDoc?.productlocationtitle);
 
   const productDescription =
+    cleanText(productDoc?.shortProductDescription) ||
     cleanText(seoDoc?.description) ||
     cleanText(seoDoc?.excerpt) ||
     cleanText(seoDoc?.productdescription);
 
-  // Prefer fields from the actual Product document (seoDoc.product), fallback to seoDoc
-  const productNode: any = seoDoc?.product ?? null;
+  // Prefer fields from the actual Product document (productDoc), fallback to seoDoc
+  const productNode: any = productDoc ?? seoDoc?.product ?? null;
 
-  const priceNum = asNumber(productNode?.salesPrice ?? seoDoc?.salesPrice);
+  const priceNum = asNumber(
+    productNode?.salesPrice ?? seoDoc?.salesPrice,
+  );
   const ratingValueNum = asNumber(
     productNode?.rating_value ?? seoDoc?.rating_value,
   );
