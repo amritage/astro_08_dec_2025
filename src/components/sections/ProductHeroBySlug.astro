@@ -275,19 +275,27 @@ const heroAlt = String(heroProduct?.altimg1 || titleText);
     </div>
 
     <!-- RIGHT -->
+       <!-- RIGHT -->
     <div class="product-visual">
       <div class="image-container">
-        <figure class="image-card">
+        <figure class="image-card" aria-label={heroAlt}>
           <img
             src={heroImg}
             alt={heroAlt}
+            title={heroAlt}
             loading="eager"
             decoding="async"
             class="product-image"
+            width="768"
+            height="1024"
+            sizes="(max-width: 640px) 100vw,
+                   (max-width: 1024px) 52vw,
+                   480px"
           />
         </figure>
       </div>
     </div>
+
   </div>
 </section>
 

@@ -3,15 +3,6 @@
 
 import { Fragment } from "astro/jsx-runtime";
 
-/**
- * Handles:
- * "/"                     → default GEO-based product landing
- * "/ahmedabad"            → city landing (legacy)
- * "/:productSlug/in/..."  → product × location landing
- * "/market-area"          → Market Area Modal (renders modal, skips content)
- * ZERO redirects; full meta injected into <head>.
- */
-
 import LandingLayout from "../layouts/LandingLayout.astro";
 import WhatsAppFab from "../components/WhatsAppFab.astro";
 import FashionTestimonial from "../components/sections/Testimonial.astro";
@@ -23,9 +14,8 @@ import StickyContactModal from "../components/StickyContactModal.astro";
 import CommitmentText from "../components/sections/CommitmentText.astro";
 import CityProductHero from "../components/sections/CityProductHero.astro";
 import ProductHeroBySlug from "../components/sections/ProductHeroBySlug.astro";
-
-// Market area modal (opened from header)
 import MarketAreaModal from "../components/MarketAreaModal.astro";
+import HeadSEO from "../components/HeadSEO.astro";
 
 export const prerender = false;
 
@@ -34,8 +24,7 @@ const DEFAULT_CITY_CODE = "ahmedabad";
 const OVERVIEW_IMG = "/images/hero/overview-fabric.webp";
 
 /** This is your fixed default product slug (used when slug is missing) */
-const FALLBACK_PRODUCT_SLUG =
-  "premium-cotton-t-shirt";
+const FALLBACK_PRODUCT_SLUG = "premium-cotton-t-shirt";
 
 // SEO + office APIs
 const SEO_PUBLIC_API = "https://test.amrita-fashions.com/api/seo/public";
@@ -108,7 +97,7 @@ const slugifyForPath = (value: string): string => {
 
 /** Resolve GEO from request IP and map to {country,state,city,area} slugs */
 const getGeoSlugsFromRequest = async (
-  req: Request
+  req: Request,
 ): Promise<GeoSlugs | null> => {
   try {
     const xff = req.headers.get("x-forwarded-for") || "";
@@ -253,8 +242,8 @@ if (!isMarketAreaModalPath) {
 
       const detailUrl = new URL(
         `${SEO_DETAIL_API}/${encodeURIComponent(
-          slugForGeo
-        )}/${encodeURIComponent(countryForApi)}`
+          slugForGeo,
+        )}/${encodeURIComponent(countryForApi)}`,
       );
 
       if (stateSlug) detailUrl.searchParams.set("state", stateSlug);
@@ -285,7 +274,7 @@ if (!isMarketAreaModalPath) {
           if (!primary && citySlug) {
             primary =
               data.find(
-                (doc) => norm(doc?.location?.city?.name) === citySlug
+                (doc) => norm(doc?.location?.city?.name) === citySlug,
               ) ?? null;
           }
 
@@ -352,6 +341,7 @@ const pageDesc = isMarketAreaModalPath
   ? "Choose your country, state, and city to find local market information."
   : seoDoc?.description || seoDoc?.excerpt || fallbackDesc;
 
+// Canonical used both by layout and OG/Twitter helper
 const canonical = reqUrl.origin + reqUrl.pathname;
 
 /* ========= Helpers ========= */
@@ -543,7 +533,7 @@ const structuredData = (() => {
       : null;
 
   return [organizationLd, productLd, breadcrumbLd, localBusinessLd].filter(
-    Boolean
+    Boolean,
   );
 })();
 
@@ -555,29 +545,17 @@ const structuredDataJson = structuredData
   .filter(Boolean);
 ---
 
-
-
 <LandingLayout title={pageTitle} description={pageDesc}>
   <Fragment slot="head">
-    <title>{pageTitle}</title>
-    <meta name="description" content={pageDesc} />
+    {/* Single source of meta/OG/Twitter - NO <title> here */}
+    <HeadSEO seo={seoDoc} canonical={canonical} />
 
-    <link rel="canonical" href={canonical} />
-
+    {/* Extra meta your app uses internally */}
     <meta name="x-geo-product-url" content={geoProductUrl} />
     {/* this is what navbar reads */}
     <meta name="x-product-slug" content={slugForGeo} />
 
-    {seoDoc?.keywords && <meta name="keywords" content={s(seoDoc.keywords)} />}
-    {seoDoc?.robots && <meta name="robots" content={s(seoDoc.robots)} />}
-    {seoDoc?.author_name && (
-      <meta name="author" content={s(seoDoc.author_name)} />
-    )}
-    {seoDoc?.themeColor && (
-      <meta name="theme-color" content={s(seoDoc.themeColor)} />
-    )}
-
-    {/* ...rest of your meta + JSON-LD exactly as before... */}
+    {/* JSON-LD schema */}
     {structuredDataJson.map((json) => (
       <script type="application/ld+json" set:html={json} />
     ))}
@@ -642,6 +620,3 @@ const structuredDataJson = structuredData
   <ContactSection />
   <MarketAreaModal />
 </LandingLayout>
-
-
-  
