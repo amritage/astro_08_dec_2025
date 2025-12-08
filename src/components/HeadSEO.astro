@@ -52,6 +52,11 @@ const asText = (v: any) => {
   return s;
 };
 
+const asNumber = (value: any) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 /**
  * Pick a value only from API sources:
  * 1) page-level seo object
@@ -124,14 +129,14 @@ const twitterPlayer = asText(
   pickSeo("twitterPlayer", "twitterplayer")
 );
 
-const tpW = pickSeo("twitterPlayerWidth", "twitterplayerwidth");
-const tpH = pickSeo("twitterPlayerHeight", "twitterplayerheight");
+const tpW = asNumber(pickSeo("twitterPlayerWidth", "twitterplayerwidth"));
+const tpH = asNumber(pickSeo("twitterPlayerHeight", "twitterplayerheight"));
 
 /* OG video */
 
 const ogVideoType = asText(pickSeo("ogVideoType", "ogvideotype"));
-const ogVideoW    = pickSeo("ogVideoWidth", "ogvideowidth");
-const ogVideoH    = pickSeo("ogVideoHeight", "ogvideoheight");
+const ogVideoW    = asNumber(pickSeo("ogVideoWidth", "ogvideowidth"));
+const ogVideoH    = asNumber(pickSeo("ogVideoHeight", "ogvideoheight"));
 
 /* Optional analytics IDs (still from API) */
 const gaId       = pickSeo("gaId", "gaid");
