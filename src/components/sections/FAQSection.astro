@@ -1,5 +1,137 @@
 ---
-// src/components/FAQSection.astro
+/* src/components/FAQSection.astro */
+
+// Phone / WhatsApp config
+const RAW_PHONE = String(
+  import.meta.env.PUBLIC_WHATSAPP_NUMBER || "919925155141" // +91 99251 55141
+);
+
+// Keep only digits
+const DIGITS = RAW_PHONE.replace(/[^\d]/g, "");
+
+// Tel link for direct call
+const telHref = DIGITS ? `tel:+${DIGITS}` : "tel:+919925155141";
+
+// WhatsApp link for catalog enquiry (no preset message, just open chat)
+const whatsappHref = DIGITS
+  ? `https://wa.me/${DIGITS}`
+  : "https://wa.me/919925155141";
+
+// ===== API URLs =====
+const FAQ_API_URL = "https://test.amrita-fashions.com/api/faqa";
+const PRODUCT_FAQ_API_URL =
+  "https://test.amrita-fashions.com/api/productandlocation/astro/products";
+
+type FaqItem = {
+  id: string;
+  questionHtml: string;
+  answerHtml: string;
+  source?: "global" | "product" | "location";
+};
+
+/* ========= Helpers ========= */
+
+const norm = (v: any) => String(v ?? "").trim().toLowerCase();
+
+/* ========= Get current slug from URL ========= */
+
+const pageUrl = new URL(Astro.request.url);
+const path = pageUrl.pathname.replace(/^\/+|\/+$/g, "");
+const segments = path ? path.split("/") : [];
+// For URLs like /slug or /slug/in/...
+const slugFromUrl = segments[0] || "";
+const slugFromUrlNorm = norm(slugFromUrl);
+
+/* ========= Global FAQs from /api/faqa ========= */
+
+let globalFaqs: FaqItem[] = [];
+
+try {
+  const res = await fetch(FAQ_API_URL);
+  if (res.ok) {
+    const json = await res.json();
+    const data = Array.isArray(json?.data) ? json.data : [];
+    globalFaqs = data.map((item: any) => ({
+      id: String(item._id || Math.random()),
+      questionHtml: String(item.question || ""),
+      answerHtml: String(item.answer || ""),
+      source: "global",
+    }));
+  }
+} catch (err) {
+  globalFaqs = [];
+}
+
+/* ========= Product + Location FAQs from productandlocation API ========= */
+
+let combinedProductFaqs: FaqItem[] = [];
+
+try {
+  const res = await fetch(PRODUCT_FAQ_API_URL, {
+    headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+  });
+  if (res.ok) {
+    const json = await res.json();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+
+    // Try to match current slug with row.slug OR row.product.slug
+    const matchedRow =
+      rows.find((row: any) => {
+        const rowSlugNorm = norm(row.slug);
+        const productSlugNorm = norm(row.product?.slug);
+        return (
+          (rowSlugNorm && rowSlugNorm === slugFromUrlNorm) ||
+          (productSlugNorm && productSlugNorm === slugFromUrlNorm)
+        );
+      }) || rows[0];
+
+    if (matchedRow) {
+      const product: any = matchedRow.product || {};
+      const location: any = matchedRow.location || {};
+
+      // Product Q&A: productquestion1..6 / productanswer1..6
+      for (let i = 1; i <= 6; i++) {
+        const qKey = `productquestion${i}`;
+        const aKey = `productanswer${i}`;
+        const q = product[qKey];
+        const a = product[aKey];
+
+        if (q && a && String(q).trim() && String(a).trim()) {
+          combinedProductFaqs.push({
+            id: `product-${matchedRow._id}-${i}`,
+            questionHtml: String(q),
+            answerHtml: String(a),
+            source: "product",
+          });
+        }
+      }
+
+      // Location Q&A: locationquestion1..6 / locationanswer1..6
+      for (let i = 1; i <= 6; i++) {
+        const qKey = `locationquestion${i}`;
+        const aKey = `locationanswer${i}`;
+        const q = location[qKey];
+        const a = location[aKey];
+
+        if (q && a && String(q).trim() && String(a).trim()) {
+          combinedProductFaqs.push({
+            id: `location-${matchedRow._id}-${i}`,
+            questionHtml: String(q),
+            answerHtml: String(a),
+            source: "location",
+          });
+        }
+      }
+    }
+  }
+} catch (err) {
+  // ignore, we'll just show global FAQs if this fails
+  combinedProductFaqs = [];
+}
+
+/* ========= Final list: product/location FAQs first, then global ========= */
+
+const allFaqs: FaqItem[] = [...combinedProductFaqs, ...globalFaqs];
 ---
 
 <section id="faq" class="faq-section">
@@ -20,127 +152,59 @@
         </ul>
 
         <div class="faq-cta-inline">
-          <a href="/contact" class="btn">Talk to a Fabric Specialist</a>
-          <a href="/catalog" class="btn secondary">Browse Fabric Catalog</a>
+          <!-- CALL: Talk to a Fabric Specialist -->
+          <a href={telHref} class="btn">
+            Talk to a Fabric Specialist
+          </a>
+
+          <!-- WHATSAPP: Browse Fabric Catalog -->
+          <a
+            href={whatsappHref}
+            class="btn secondary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Browse Fabric Catalog
+          </a>
         </div>
       </div>
 
       <!-- Right: FAQ List -->
       <div class="faq-list">
-        <!-- FAQ Item 1 -->
-        <div class="faq-item" data-faq-item>
-          <button class="faq-question" type="button" aria-expanded="false">
-            <span>What is your minimum order quantity for bulk fabric orders?</span>
-            <span class="faq-icon-wrap">
-              <svg class="faq-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M3 8H13M8 3V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>
-              It depends on the fabric. Standard qualities usually start from
-              around 500 yards, while some custom or specialty developments can
-              begin at ~300 yards. Share your target and we'll confirm the most
-              practical MOQ.
-            </p>
-          </div>
-        </div>
+        {allFaqs.length > 0 ? (
+          allFaqs.map((faq) => (
+            <div class="faq-item" data-faq-item>
+              <button class="faq-question" type="button" aria-expanded="false">
+                <!-- Question HTML from API(s) -->
+                <div class="faq-question-main" set:html={faq.questionHtml}></div>
 
-        <!-- FAQ Item 2 -->
-        <div class="faq-item" data-faq-item>
-          <button class="faq-question" type="button" aria-expanded="false">
-            <span>Do you provide fabric samples before placing bulk orders?</span>
-            <span class="faq-icon-wrap">
-              <svg class="faq-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M3 8H13M8 3V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>
-              Yes. We share curated swatches so your team can check color, feel,
-              and construction. Standard samples are often complimentary; custom
-              developments may be adjusted against your first bulk order.
-            </p>
-          </div>
-        </div>
-
-        <!-- FAQ Item 3 -->
-        <div class="faq-item" data-faq-item>
-          <button class="faq-question" type="button" aria-expanded="false">
-            <span>What are your payment terms for B2B fabric orders?</span>
-            <span class="faq-icon-wrap">
-              <svg class="faq-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M3 8H13M8 3V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>
-              Typically 50% advance and 50% before dispatch for new buyers.
-              Long-term partners may qualify for structured credit terms after
-              review.
-            </p>
-          </div>
-        </div>
-
-        <!-- FAQ Item 4 -->
-        <div class="faq-item" data-faq-item>
-          <button class="faq-question" type="button" aria-expanded="false">
-            <span>How do you ensure consistent quality across large orders?</span>
-            <span class="faq-icon-wrap">
-              <svg class="faq-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M3 8H13M8 3V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>
-              Each lot passes through yarn checks, on-loom inspection, finishing
-              control, and lab tests (shrinkage, GSM, color fastness, etc.).
-              Reports or third-party inspection can be arranged on request.
-            </p>
-          </div>
-        </div>
-
-        <!-- FAQ Item 5 -->
-        <div class="faq-item" data-faq-item>
-          <button class="faq-question" type="button" aria-expanded="false">
-            <span>What is your typical lead time from confirmation to dispatch?</span>
-            <span class="faq-icon-wrap">
-              <svg class="faq-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M3 8H13M8 3V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>
-              Standard repeats: approx. 4–6 weeks. New developments or complex
-              finishes: 6–8 weeks. Faster slots can be discussed for priority
-              programs.
-            </p>
-          </div>
-        </div>
-
-        <!-- FAQ Item 6 -->
-        <div class="faq-item" data-faq-item>
-          <button class="faq-question" type="button" aria-expanded="false">
-            <span>Do you support custom fabric development?</span>
-            <span class="faq-icon-wrap">
-              <svg class="faq-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M3 8H13M8 3V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>
-              Yes. We work with your tech pack or moodboard on count, GSM,
-              weave/knit, finish, and performance. Our team suggests the most
-              production-friendly options to hit your cost and quality targets.
-            </p>
-          </div>
-        </div>
+                <span class="faq-icon-wrap">
+                  <svg
+                    class="faq-icon"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 8H13M8 3V13"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              </button>
+              <div class="faq-answer" hidden>
+                <!-- Answer HTML from API(s) -->
+                <div class="faq-answer-inner" set:html={faq.answerHtml}></div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No FAQs available right now. Please check back later.</p>
+        )}
       </div>
     </div>
   </div>
@@ -314,8 +378,14 @@
     color: var(--tp-theme-primary);
   }
 
-  .faq-question span:first-child {
+  .faq-question-main {
     flex: 1;
+  }
+
+  .faq-question-main :where(h1, h2, h3, h4, h5, h6, p) {
+    margin: 0;
+    font: inherit;
+    color: inherit;
   }
 
   .faq-icon-wrap {
@@ -359,7 +429,7 @@
     max-height: 500px;
   }
 
-  .faq-answer p {
+  .faq-answer-inner :where(p, h1, h2, h3, h4, h5, h6) {
     margin: 0;
   }
 
@@ -382,11 +452,11 @@
       padding: 40px 0;
     }
     .faq-question {
-      padding: 16px 20px 16px 24px;
+      padding: 17px 20px 16px 24px;
       font-size: 1rem;
     }
     .faq-item.active .faq-answer {
-      padding: 0 24px 20px;
+      padding: 0 23px 20px;
     }
     .faq-cta-inline {
       flex-direction: column;
@@ -399,36 +469,36 @@
 </style>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const faqItems = document.querySelectorAll('[data-faq-item]');
-    
-    faqItems.forEach(item => {
-      const question = item.querySelector('.faq-question');
-      const answer = item.querySelector('.faq-answer');
-      
-      question.addEventListener('click', () => {
-        const isActive = item.classList.contains('active');
-        
+  document.addEventListener("DOMContentLoaded", function () {
+    const faqItems = document.querySelectorAll("[data-faq-item]");
+
+    faqItems.forEach((item) => {
+      const question = item.querySelector(".faq-question");
+      const answer = item.querySelector(".faq-answer");
+
+      question.addEventListener("click", () => {
+        const isActive = item.classList.contains("active");
+
         // Close all FAQ items
-        faqItems.forEach(otherItem => {
+        faqItems.forEach((otherItem) => {
           if (otherItem !== item) {
-            otherItem.classList.remove('active');
-            const otherAnswer = otherItem.querySelector('.faq-answer');
-            const otherButton = otherItem.querySelector('.faq-question');
+            otherItem.classList.remove("active");
+            const otherAnswer = otherItem.querySelector(".faq-answer");
+            const otherButton = otherItem.querySelector(".faq-question");
             otherAnswer.hidden = true;
-            otherButton.setAttribute('aria-expanded', 'false');
+            otherButton.setAttribute("aria-expanded", "false");
           }
         });
-        
+
         // Toggle current item
         if (!isActive) {
-          item.classList.add('active');
+          item.classList.add("active");
           answer.hidden = false;
-          question.setAttribute('aria-expanded', 'true');
+          question.setAttribute("aria-expanded", "true");
         } else {
-          item.classList.remove('active');
+          item.classList.remove("active");
           answer.hidden = true;
-          question.setAttribute('aria-expanded', 'false');
+          question.setAttribute("aria-expanded", "false");
         }
       });
     });
