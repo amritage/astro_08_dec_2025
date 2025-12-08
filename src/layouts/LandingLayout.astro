@@ -20,7 +20,10 @@ const { title, description, canonical } = Astro.props as LayoutProps;
   <head>
     <meta charset="utf-8" />
     <!-- Viewport default; pages can override in head slot -->
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
 
     {title && <title>{title}</title>}
     {description && <meta name="description" content={description} />}
