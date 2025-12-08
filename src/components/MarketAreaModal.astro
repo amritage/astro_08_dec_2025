@@ -1,10 +1,20 @@
-<script>
+---
+import { API_BASE_URL } from "../lib/api";
+const API_BASE = API_BASE_URL;
+---
+
+<script data-api-base={API_BASE}>
   /* ---------- API Endpoints ---------- */
+  const API_ROOT = (document.currentScript?.dataset?.apiBase || "").replace(
+    /\/+$/,
+    ""
+  );
+
   const API = {
-    countries: "https://test.amrita-fashions.com/api/countries",
-    states: "https://test.amrita-fashions.com/api/states",
-    cities: "https://test.amrita-fashions.com/api/cities",
-    locations: "https://test.amrita-fashions.com/api/locations",
+    countries: `${API_ROOT}/countries`,
+    states: `${API_ROOT}/states`,
+    cities: `${API_ROOT}/cities`,
+    locations: `${API_ROOT}/locations`,
   };
 
   /* ---------- DOM Elements (cached after DOMContentLoaded) ---------- */

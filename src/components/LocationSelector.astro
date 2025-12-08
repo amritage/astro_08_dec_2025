@@ -1,6 +1,7 @@
 ---
 import { useState, useRef } from "react";
 import { ChevronDown, Search, MapPin } from "lucide-react";
+import { apiUrl } from "../lib/api";
 
 interface Country {
   _id: string;
@@ -40,9 +41,9 @@ interface City {
 export async function getStaticProps() {
   try {
     const [countriesRes, statesRes, citiesRes] = await Promise.all([
-      fetch('https://test.amrita-fashions.com/api/countries'),
-      fetch('https://test.amrita-fashions.com/api/states'),
-      fetch('https://test.amrita-fashions.com/api/cities')
+      fetch(apiUrl("countries")),
+      fetch(apiUrl("states")),
+      fetch(apiUrl("cities")),
     ]);
 
     const countriesData = await countriesRes.json();

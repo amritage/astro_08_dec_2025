@@ -11,6 +11,8 @@
  * Those are handled by the main layout using API values passed as props.
  */
 
+import { apiUrl } from "../lib/api";
+
 interface Props {
   seo?: Record<string, any> | null;
   canonical?: string | undefined;
@@ -20,7 +22,7 @@ const { seo = null, canonical } = Astro.props as Props;
 
 /* ========= Default SEO API ========= */
 
-const DEFAULT_SEO_API = "https://test.amrita-fashions.com/api/defaultseo";
+const DEFAULT_SEO_API = apiUrl("defaultseo");
 
 let defaultSeo: Record<string, any> | null = null;
 

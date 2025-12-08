@@ -2,11 +2,14 @@
 // src/pages/market-area.astro
 
 import LandingLayout from "../layouts/LandingLayout.astro";
+import { API_BASE_URL } from "../lib/api";
 
 const PAGE_TITLE = "Market Area – Countries, States & Cities";
 const PAGE_DESCRIPTION =
   "Browse all countries, states and cities where we serve fabric buyers and garment manufacturers.";
 ---
+
+const API_BASE = API_BASE_URL;
 
 <LandingLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
   <main class="market-page">
@@ -147,12 +150,15 @@ const PAGE_DESCRIPTION =
   </main>
 
   <!-- ================== JS ================== -->
-  <script type="module">
+  <script type="module" data-api-base={API_BASE}>
+    const API_ROOT = (document.currentScript?.dataset?.apiBase || "")
+      .replace(/\/+$/, "");
+
     const API = {
-      countries: "https://test.amrita-fashions.com/api/countries",
-      states: "https://test.amrita-fashions.com/api/states",
-      cities: "https://test.amrita-fashions.com/api/cities",
-      locations: "https://test.amrita-fashions.com/api/locations",
+      countries: `${API_ROOT}/countries`,
+      states: `${API_ROOT}/states`,
+      cities: `${API_ROOT}/cities`,
+      locations: `${API_ROOT}/locations`,
     };
 
     /* ---------- Helpers ---------- */

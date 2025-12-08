@@ -1,4 +1,6 @@
 ---
+import { apiUrl } from "../../lib/api";
+
 interface Props {
   currentSlug?: string | null;
   seoDoc?: any | null;
@@ -14,7 +16,7 @@ const {
   seoDoc = null,
   productFromSeo = null,
   // fallback API (used only if seoDoc not passed)
-  seoApi = "https://test.amrita-fashions.com/api/seo/public",
+  seoApi = apiUrl("seo/public"),
   contactHref = "/contact",
   phone = "+91 99999 99999",
 } = Astro.props as Props;

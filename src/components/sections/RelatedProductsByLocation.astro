@@ -1,5 +1,6 @@
 ---
 import { Fragment } from "astro/jsx-runtime";
+import { API_BASE_URL, apiUrl } from "../../lib/api";
 
 interface Product {
   _id?: string;
@@ -115,8 +116,8 @@ const reqUrl = new URL(Astro.request.url);
 
 /* ================= API roots ================= */
 
-const API_ROOT = "https://test.amrita-fashions.com/api";
-const SEO_API = `${API_ROOT}/seo`;
+const API_ROOT = API_BASE_URL;
+const SEO_API = apiUrl("seo");
 
 /* ================= Target location / product ================= */
 
@@ -231,7 +232,7 @@ const getProductArea = (product: any): string => {
 if (relatedRaw.length === 0) {
   try {
     const publicResponse = await fetchJson(
-      "https://test.amrita-fashions.com/api/seo/public"
+      apiUrl("seo/public")
     );
     if (publicResponse?.data) {
       const allData = Array.isArray(publicResponse.data)

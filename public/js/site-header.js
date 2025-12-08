@@ -1,6 +1,11 @@
 // src/scripts/site-header.js
 
 (function () {
+  const script = document.currentScript || document.querySelector("script[src*='site-header.js']");
+  const API_BASE_URL = (script?.dataset?.apiBase || "").replace(/\/+$/, "");
+
+  const apiUrl = (path) => `${API_BASE_URL}/${String(path || "").replace(/^\/+/, "")}`;
+
   const cb = document.getElementById("nav-open");
   const header = document.querySelector(".site-header");
   const label = document.querySelector(".hamburger");
@@ -407,9 +412,7 @@
 
   async function fetchCountries() {
     try {
-      const response = await fetch(
-        "https://test.amrita-fashions.com/api/countries"
-      );
+      const response = await fetch(apiUrl("countries"));
       if (!response.ok) throw new Error("Failed to fetch countries");
       const json = await response.json();
       countries = Array.isArray(json)
@@ -436,7 +439,7 @@
 
   async function fetchStates() {
     try {
-      const response = await fetch("https://test.amrita-fashions.com/api/states");
+      const response = await fetch(apiUrl("states"));
       if (!response.ok) throw new Error("Failed to fetch states");
       const json = await response.json();
 
@@ -509,7 +512,7 @@
 
   async function fetchCities() {
     try {
-      const response = await fetch("https://test.amrita-fashions.com/api/cities");
+      const response = await fetch(apiUrl("cities"));
       if (!response.ok) throw new Error("Failed to fetch cities");
       const json = await response.json();
 

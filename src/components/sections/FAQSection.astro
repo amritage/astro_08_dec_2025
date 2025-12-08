@@ -1,5 +1,6 @@
 ---
 /* src/components/FAQSection.astro */
+import { apiUrl } from "../../lib/api";
 
 // Phone / WhatsApp config
 const RAW_PHONE = String(
@@ -18,9 +19,8 @@ const whatsappHref = DIGITS
   : "https://wa.me/919925155141";
 
 // ===== API URLs =====
-const FAQ_API_URL = "https://test.amrita-fashions.com/api/faqa";
-const PRODUCT_FAQ_API_URL =
-  "https://test.amrita-fashions.com/api/productandlocation/astro/products";
+const FAQ_API_URL = apiUrl("faqa");
+const PRODUCT_FAQ_API_URL = apiUrl("productandlocation/astro/products");
 
 type FaqItem = {
   id: string;

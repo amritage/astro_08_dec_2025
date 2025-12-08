@@ -18,6 +18,7 @@ import CityProductHero from "../components/sections/CityProductHero.astro";
 import ProductHeroBySlug from "../components/sections/ProductHeroBySlug.astro";
 import MarketAreaModal from "../components/MarketAreaModal.astro";
 import HeadSEO from "../components/HeadSEO.astro";
+import { apiUrl } from "../lib/api";
 
 export const prerender = false;
 
@@ -29,17 +30,16 @@ const OVERVIEW_IMG = "/images/hero/overview-fabric.webp";
 const FALLBACK_PRODUCT_SLUG = "premium-cotton-t-shirt";
 
 // SEO + office APIs
-const SEO_PUBLIC_API = "https://test.amrita-fashions.com/api/seo/public";
-const SEO_DETAIL_API = "https://test.amrita-fashions.com/api/seo";
+const SEO_PUBLIC_API = apiUrl("seo/public");
+const SEO_DETAIL_API = apiUrl("seo");
 const OFFICE_INFO_API =
   "https://test.amrita-fashions.com/landing/officeinformation";
 
 /** Product API */
-const PRODUCT_API = "https://test.amrita-fashions.com/api/product";
+const PRODUCT_API = apiUrl("product");
 
 /** Product × Location API (Astro landing) */
-const PRODUCT_LOCATION_API =
-  "https://test.amrita-fashions.com/api/productandlocation/astro/products";
+const PRODUCT_LOCATION_API = apiUrl("productandlocation/astro/products");
 
 /** Public GEO API base (can override via env) */
 const GEO_API_BASE =
