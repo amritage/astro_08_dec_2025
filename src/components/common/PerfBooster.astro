@@ -39,7 +39,7 @@ const {
     "https://test.amrita-fashions.com",
     "https://fonts.googleapis.com",
     "https://fonts.gstatic.com",
-    "https://cdnjs.cloudflare.com"
+    "https://cdnjs.cloudflare.com",
   ],
   lcpSelector = 'img[data-lcp], .hero img, img.hero',
   lcpSrc,
@@ -48,13 +48,18 @@ const {
   containSize = "600px 800px",
   deferCssSelectors = 'link[data-defer-css], link[href*="fontawesome"]',
 } = Astro.props as Props;
+
+// Remove duplicate/falsy preconnect hosts to avoid redundant head entries
+const uniquePreconnects = Array.from(
+  new Set(preconnect.filter((h) => Boolean(h?.trim()))),
+);
 ---
 
 <astro:head>
-  {preconnect.map((h) => (
+  {uniquePreconnects.map((h) => (
     <link rel="preconnect" href={h} crossorigin="anonymous" />
   ))}
-  {preconnect.map((h) => (
+  {uniquePreconnects.map((h) => (
     <link rel="dns-prefetch" href={h} />
   ))}
 
@@ -69,8 +74,6 @@ const {
     />
   )}
 
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="light dark" />
 </astro:head>
 
 <!--
