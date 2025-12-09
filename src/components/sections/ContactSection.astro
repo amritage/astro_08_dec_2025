@@ -6,8 +6,10 @@ interface Props {
   heading?: string;
   subheading?: string;
 }
+
+const API_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? "").toString().replace(/\/+$/,'');
 const {
-  officeApi = "https://test.amrita-fashions.com/landing/officeinformation",
+  officeApi = API_BASE ? `${API_BASE}/officeinformation` : "/officeinformation",
   heading = "Get Your Free Sample Today",
   subheading = "Tell us what you need — we'll get back within 1 business day."
 } = Astro.props as Props;
@@ -42,8 +44,7 @@ const social = {
 };
 
 /* Client submit target & headers via PUBLIC env */
-const RAW_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? "https://test.amrita-fashions.com/landing").replace(/\/+$/,'');
-const CONTACT_URL = `${RAW_BASE}/contacts`;
+const CONTACT_URL = API_BASE ? `${API_BASE}/contacts` : "/contacts";
 const API_KEY = import.meta.env.PUBLIC_API_KEY ?? "";
 const ADMIN_EMAIL = import.meta.env.PUBLIC_ADMIN_EMAIL ?? "";
 const API_KEY_HEADER = import.meta.env.PUBLIC_API_KEY_HEADER ?? "x-api-key";

@@ -34,13 +34,16 @@ export interface Props {
   deferCssSelectors?: string;
 }
 
+const apiBase = (import.meta.env.PUBLIC_API_BASE_URL ?? "").toString().replace(/\/+$/,'');
+const defaultPreconnect = [
+  ...(apiBase ? [apiBase] : []),
+  "https://fonts.googleapis.com",
+  "https://fonts.gstatic.com",
+  "https://cdnjs.cloudflare.com"
+];
+
 const {
-  preconnect = [
-    "https://test.amrita-fashions.com",
-    "https://fonts.googleapis.com",
-    "https://fonts.gstatic.com",
-    "https://cdnjs.cloudflare.com"
-  ],
+  preconnect = defaultPreconnect,
   lcpSelector = 'img[data-lcp], .hero img, img.hero',
   lcpSrc,
   lcpSrcset,

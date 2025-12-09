@@ -11,12 +11,12 @@ const SITE = (import.meta.env.SITE || "https://astro-landing-page-rho.vercel.app
   .replace(/\/+$/, "");
 
 const API_BASE = (
-  import.meta.env.API_BASE_URL || "https://test.amrita-fashions.com/landing/"
+  import.meta.env.PUBLIC_API_BASE_URL || import.meta.env.API_BASE_URL || ""
 )
   .toString()
   .replace(/\/+$/, "");
 
-// final SEO list endpoint => https://test.amrita-fashions.com/landing/seo
+// final SEO list endpoint => ${PUBLIC_API_BASE_URL}/seo
 const SEO_ENDPOINT = `${API_BASE}/seo`;
 
 // headers + keys from your .env

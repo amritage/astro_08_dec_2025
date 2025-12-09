@@ -37,6 +37,8 @@ function allBlank(v: Record<string, unknown>) {
   });
 }
 
+const API_ROOT = (import.meta.env.PUBLIC_API_BASE_URL ?? "").toString().replace(/\/+$/, "");
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     const src = await readBody(request);
@@ -71,7 +73,14 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Create
-    const upstream = await fetch("https://test.amrita-fashions.com/landing/contacts", {
+    if (!API_ROOT) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Missing PUBLIC_API_BASE_URL" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const upstream = await fetch(`${API_ROOT}/contacts`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(body),
@@ -88,7 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Optional: also PUT if client sends draft id
     const id = (src.draftId as string) || (src.id as string) || "";
     if (id) {
-      await fetch(`https://test.amrita-fashions.com/landing/contacts/${encodeURIComponent(id)}`, {
+      await fetch(`${API_ROOT}/contacts/${encodeURIComponent(id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(body),

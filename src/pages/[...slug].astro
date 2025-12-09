@@ -30,10 +30,10 @@ const OVERVIEW_IMG = "/images/hero/overview-fabric.webp";
 const FALLBACK_PRODUCT_SLUG = "premium-cotton-t-shirt";
 
 // SEO + office APIs
+const API_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? "").toString().replace(/\/+$/,'');
 const SEO_PUBLIC_API = apiUrl("seo/public");
 const SEO_DETAIL_API = apiUrl("seo");
-const OFFICE_INFO_API =
-  "https://test.amrita-fashions.com/landing/officeinformation";
+const OFFICE_INFO_API = API_BASE ? `${API_BASE}/officeinformation` : "/officeinformation";
 
 /** Product API */
 const PRODUCT_API = apiUrl("product");

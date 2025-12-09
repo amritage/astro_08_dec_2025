@@ -15,8 +15,7 @@ const trustedLogos = [
 ];
 
 /* ========= Fetch officeinformation ========= */
-const API_BASE =
-  import.meta.env.PUBLIC_API_BASE_URL ?? 'https://test.amrita-fashions.com';
+const API_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? '').toString().replace(/\/+$/, '');
 
 let officeInfo: any = null;
 

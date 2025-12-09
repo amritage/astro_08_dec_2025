@@ -14,7 +14,7 @@ const COL = {
   white: rgb(1, 1, 1),
 };
 
-const API_ROOT = (import.meta.env.PUBLIC_API_BASE_URL ?? 'https://test.amrita-fashions.com/landing').replace(/\/+$/, '');
+const API_ROOT = (import.meta.env.PUBLIC_API_BASE_URL ?? '').toString().replace(/\/+$/, '');
 const API_KEY   = import.meta.env.PUBLIC_API_KEY ?? '';
 const ADMIN     = import.meta.env.PUBLIC_ADMIN_EMAIL ?? '';
 

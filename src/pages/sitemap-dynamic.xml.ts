@@ -5,11 +5,12 @@ export const prerender = false;
 /* ========= Env & config (with fallbacks) ========= */
 const SITE = (import.meta.env.SITE || 'https://astro-landing-page-rho.vercel.app').replace(/\/+$/, '');
 
-// Accept either API_BASE or API_BASE_URL
+// Accept either PUBLIC_API_BASE_URL or legacy API_BASE* envs
 const _apiBase =
+  (import.meta.env.PUBLIC_API_BASE_URL as string) ||
   (import.meta.env.API_BASE as string) ||
   (import.meta.env.API_BASE_URL as string) ||
-  'https://test.amrita-fashions.com';
+  '';
 const API_BASE = _apiBase.replace(/\/+$/, ''); // trims trailing slash
 
 // Optional auth headers (your API uses these)
