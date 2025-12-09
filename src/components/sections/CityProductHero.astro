@@ -8,7 +8,7 @@ const toId = (v: any) => (typeof v === 'string' ? v.trim() : v?._id ? String(v._
 async function fetchJson(url: string) { try { const r = await fetch(url,{headers:{Accept:'application/json'}}); if(!r.ok) return null; return await r.json(); } catch { return null; } }
 function cityTokenInSlug(slug: string, city: string) { const c = norm(city).replace(/\s+/g, '-'); const re = new RegExp(`(^|-)${c}(-|$)`, 'i'); return re.test(String(slug||'').toLowerCase()); }
 
-const API_ROOT = (import.meta.env.PUBLIC_API_BASE_URL ?? 'https://test.amrita-fashions.com/landing').replace(/\/+$/, '');
+const API_ROOT = (import.meta.env.PUBLIC_API_BASE_URL ?? '').toString().replace(/\/+$/, '');
 const [seoJson, prodJson, locJson] = await Promise.all([
   fetchJson(`${API_ROOT}/seo`),
   fetchJson(`${API_ROOT}/product`),

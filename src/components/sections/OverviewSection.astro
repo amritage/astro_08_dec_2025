@@ -8,7 +8,7 @@ export interface Props {
 const { currentSlug = null, seoApi, productApi } = Astro.props;
 
 /* ===== Endpoints & headers ===== */
-const RAW_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? "https://test.amrita-fashions.com/landing").replace(/\/+$/,'');
+const RAW_BASE = (import.meta.env.PUBLIC_API_BASE_URL ?? "").toString().replace(/\/+$/,'');
 const SEO_URL = (seoApi ?? `${RAW_BASE}/seo`).replace(/\/+$/,'');
 const PRODUCT_URL = (productApi ?? `${RAW_BASE}/product`).replace(/\/+$/,'');
 

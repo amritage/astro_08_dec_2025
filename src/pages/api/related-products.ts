@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 
 export const prerender = false;
 
-const API_ROOT = (import.meta.env.PUBLIC_API_BASE_URL ?? "https://test.amrita-fashions.com/landing")
+const API_ROOT = (import.meta.env.PUBLIC_API_BASE_URL ?? "")
   .toString()
   .replace(/\/+$/, "");
 
