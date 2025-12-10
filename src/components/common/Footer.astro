@@ -21,7 +21,7 @@ const API_BASE =
 let officeInfo: any = null;
 
 try {
-  const res = await fetch(`${API_BASE}/api/officeinformation`);
+  const res = await fetch(`${API_BASE}/officeinformation`);
   if (res.ok) {
     const json = await res.json();
     officeInfo = json?.data?.[0] ?? null;
@@ -229,7 +229,15 @@ const year = new Date().getFullYear();
                     <span class="age-arrow">›</span>
                   </button>
                 </form>
-                <p id="newsletterMessage" class="newsletter-message" style="display: none; margin-top: 10px; font-size: 14px;"></p>
+                <div id="newsletterToast" class="newsletter-toast">
+                  <div class="newsletter-toast-content">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    <span id="toastMessage">Thank you for subscribing!</span>
+                  </div>
+                </div>
               </div>
 
               <!-- Phone / Email (DYNAMIC) -->
@@ -542,6 +550,45 @@ const year = new Date().getFullYear();
       border-radius: 4px;
       text-align: center;
     }
+    
+    /* Beautiful Toast Notification Styles */
+    .newsletter-toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #10B981; /* Green color for success */
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      display: none; /* Hidden by default */
+      align-items: center;
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      max-width: 400px;
+    }
+    
+    .newsletter-toast.show {
+      display: flex !important; /* Ensure it displays when shown */
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .newsletter-toast.error {
+      background: #EF4444; /* Red color for errors */
+    }
+    
+    .newsletter-toast-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .newsletter-toast-content svg {
+      flex-shrink: 0;
+    }
 
     @media (max-width:991px){
       .age-title{ font-size:18px; }
@@ -571,11 +618,14 @@ const year = new Date().getFullYear();
     document.addEventListener('DOMContentLoaded', function() {
       const newsletterForm = document.getElementById('newsletterForm');
       const newsletterEmail = document.getElementById('newsletterEmail');
-      const newsletterMessage = document.getElementById('newsletterMessage');
+      const newsletterToast = document.getElementById('newsletterToast');
+      const toastMessage = document.getElementById('toastMessage');
       
       if (newsletterForm) {
         newsletterForm.addEventListener('submit', async function(e) {
+          // Prevent page refresh
           e.preventDefault();
+          e.stopPropagation();
           
           const email = newsletterEmail.value.trim();
           if (!email) return;
@@ -588,16 +638,21 @@ const year = new Date().getFullYear();
           
           try {
             // Get API base URL from environment
-            const API_BASE = import.meta.env.PUBLIC_API_BASE_URL || '';
-            if (!API_BASE) {
-              throw new Error('API base URL not configured');
-            }
+            const API_BASE = import.meta.env.PUBLIC_API_BASE_URL || 'https://test.amrita-fashions.com';
             
-            // Prepare payload for newsletter subscription
+            // Prepare payload for newsletter subscription - matching the API format
             const payload = {
               email: email,
-              source: 'website_newsletter',
-              additionalMessage: 'Newsletter subscription request'
+              contactPerson: 'Newsletter Subscriber',
+              phoneNumber: '',
+              businessType: '',
+              annualFabricVolume: '',
+              primaryMarkets: '',
+              fabricTypesOfInterest: [],
+              specificationsRequirements: '',
+              timeline: '',
+              additionalMessage: 'Subscribed to newsletter',
+              companyName: ''
             };
             
             // Submit to contact API
@@ -610,32 +665,57 @@ const year = new Date().getFullYear();
             });
             
             if (response.ok) {
-              // Success
-              newsletterMessage.textContent = 'Thank you for subscribing to our newsletter!';
-              newsletterMessage.style.color = '#10B981'; // green
-              newsletterMessage.style.display = 'block';
-              newsletterForm.reset();
+              const responseData = await response.json();
+              if (responseData.success) {
+                // Success - show beautiful toast notification
+                showToast('Thank you for subscribing to our newsletter!', 'success');
+                newsletterForm.reset();
+              } else {
+                throw new Error(responseData.message || 'Failed to subscribe');
+              }
             } else {
-              // Error
-              const errorData = await response.json().catch(() => ({}));
-              throw new Error(errorData.message || 'Failed to subscribe');
+              throw new Error('Failed to connect to server');
             }
           } catch (error) {
-            // Handle error
-            newsletterMessage.textContent = error.message || 'Something went wrong. Please try again.';
-            newsletterMessage.style.color = '#EF4444'; // red
-            newsletterMessage.style.display = 'block';
+            // Handle error - show error toast
+            showToast(error.message || 'Something went wrong. Please try again.', 'error');
           } finally {
             // Reset button
             submitButton.innerHTML = originalButtonText;
             submitButton.disabled = false;
-            
-            // Hide message after 5 seconds
-            setTimeout(() => {
-              newsletterMessage.style.display = 'none';
-            }, 5000);
           }
+          
+          // Return false to ensure no form submission happens
+          return false;
         });
+      }
+      
+      // Function to show beautiful toast notification
+      function showToast(message, type) {
+        if (!newsletterToast || !toastMessage) return;
+        
+        // Set message
+        toastMessage.textContent = message;
+        
+        // Set type class
+        newsletterToast.className = 'newsletter-toast';
+        if (type === 'error') {
+          newsletterToast.classList.add('error');
+        }
+        
+        // Show toast with proper display
+        newsletterToast.style.display = 'flex';
+        // Trigger reflow to ensure the transition works
+        newsletterToast.offsetHeight;
+        newsletterToast.classList.add('show');
+        
+        // Hide toast after 5 seconds
+        setTimeout(() => {
+          newsletterToast.classList.remove('show');
+          setTimeout(() => {
+            newsletterToast.style.display = 'none';
+          }, 300);
+        }, 5000);
       }
     });
   </script>

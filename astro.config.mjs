@@ -6,7 +6,7 @@ import vercel from '@astrojs/vercel';
 export default defineConfig({
   devToolbar: { enabled: false },
 
-  site: 'https://astro-landing-page-rho.vercel.app', // ✅ add this
+  site: 'https://astro-landing-page-railway.app', // Updated for Railway deployment
 
   output: 'server',
   prerender: false,
@@ -15,7 +15,7 @@ export default defineConfig({
   adapter: vercel({
     isr: { expiration: 60 * 60 },
   }),
- build: {
+  build: {
     // ✅ safest for your current setup of big per-section <style> blocks
     inlineStylesheets: 'auto', // 'auto' | 'always' | 'never'
   },
