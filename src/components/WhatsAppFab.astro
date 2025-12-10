@@ -24,16 +24,70 @@ const {
 
 // --- PHONE + URL LOGIC ----------------------------------------------------
 
-// raw phone: prop > env var > ""
-const RAW_PHONE = String(
-  phone ?? import.meta.env.PUBLIC_WHATSAPP_NUMBER ?? ""
-).trim();
+// First, try to get phone from prop
+let RAW_PHONE = String(phone ?? "").trim();
+
+// If no prop, try to fetch from office information API
+if (!RAW_PHONE) {
+  try {
+    // Use environment variable for API base URL
+    const API_BASE = import.meta.env.PUBLIC_API_BASE_URL;
+    const OFFICE_INFO_URL = `${API_BASE}/officeinformation`;
+    
+    console.log(`[WhatsAppFab] Attempting to fetch from: ${OFFICE_INFO_URL}`);
+    
+    // Fetch office information with proper headers
+    const response = await fetch(OFFICE_INFO_URL, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    console.log(`[WhatsAppFab] Response status: ${response.status}`);
+    
+    if (response.ok) {
+      const jsonData = await response.json();
+      console.log(`[WhatsAppFab] Response data:`, jsonData);
+      
+      // Check if data exists and has the expected structure
+      if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length > 0) {
+        const officeInfo = jsonData.data[0];
+        console.log(`[WhatsAppFab] Office info:`, officeInfo);
+        
+        if (officeInfo.whatsappNumber) {
+          RAW_PHONE = String(officeInfo.whatsappNumber).trim();
+          console.log(`[WhatsAppFab] Successfully extracted WhatsApp number: ${RAW_PHONE}`);
+        } else {
+          console.warn(`[WhatsAppFab] whatsappNumber not found in office info`);
+        }
+      } else {
+        console.warn(`[WhatsAppFab] Unexpected data structure in API response`);
+      }
+    } else {
+      console.warn(`[WhatsAppFab] API request failed with status: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn("[WhatsAppFab] Failed to fetch WhatsApp number from API:", error);
+  }
+}
+
+// If still no phone, fallback to environment variable
+if (!RAW_PHONE) {
+  RAW_PHONE = String(import.meta.env.PUBLIC_WHATSAPP_NUMBER ?? "").trim();
+  if (RAW_PHONE) {
+    console.log(`[WhatsAppFab] Using fallback WhatsApp number from env: ${RAW_PHONE}`);
+  }
+}
+
+console.log(`[WhatsAppFab] Final RAW_PHONE: '${RAW_PHONE}'`);
 
 // wa.me expects digits only (no +, spaces, etc.)
 const DIGITS = RAW_PHONE.replace(/[^\d]/g, "");
+console.log(`[WhatsAppFab] Final DIGITS: '${DIGITS}'`);
 
 // if no digits -> wa.me will behave as "share/forward"
 const HAS_PHONE = DIGITS.length > 0;
+console.log(`[WhatsAppFab] HAS_PHONE: ${HAS_PHONE}`);
 
 if (!HAS_PHONE) {
   console.warn(
@@ -49,6 +103,8 @@ const encoded = encodeURIComponent(message);
 const href = HAS_PHONE
   ? `https://wa.me/${DIGITS}?text=${encoded}`
   : `https://wa.me?text=${encoded}`;
+  
+console.log(`[WhatsAppFab] Generated href: ${href}`);
 ---
 
 <!-- Wrapper -->
