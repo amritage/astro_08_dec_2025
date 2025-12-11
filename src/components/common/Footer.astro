@@ -16,7 +16,7 @@ const trustedLogos = [
 
 /* ========= Fetch officeinformation ========= */
 const API_BASE =
-  import.meta.env.PUBLIC_API_BASE_URL ?? 'https://test.amrita-fashions.com';
+  import.meta.env.PUBLIC_API_BASE_URL;
 
 let officeInfo: any = null;
 
@@ -638,7 +638,7 @@ const year = new Date().getFullYear();
           
           try {
             // Get API base URL from environment
-            const API_BASE = import.meta.env.PUBLIC_API_BASE_URL || 'https://test.amrita-fashions.com';
+            const API_BASE = import.meta.env.PUBLIC_API_BASE_URL;
             
             // Prepare payload for newsletter subscription - matching the API format
             const payload = {

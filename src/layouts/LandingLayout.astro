@@ -13,6 +13,24 @@ interface LayoutProps {
 }
 
 const { title, description, canonical } = Astro.props as LayoutProps;
+
+/**
+ * Backend / API origin derived from env
+ * Example:
+ * PUBLIC_API_BASE_URL = "https://test.amrita-fashions.com/landing"
+ * => API_ORIGIN = "https://test.amrita-fashions.com"
+ */
+const RAW_API_BASE = import.meta.env.PUBLIC_API_BASE_URL as string | undefined;
+let API_ORIGIN = "";
+
+if (RAW_API_BASE) {
+  try {
+    API_ORIGIN = new URL(RAW_API_BASE).origin;
+  } catch {
+    // Fallback: strip trailing slashes and path if URL constructor fails
+    API_ORIGIN = RAW_API_BASE.replace(/\/+$/, "");
+  }
+}
 ---
 
 <!doctype html>
@@ -33,10 +51,18 @@ const { title, description, canonical } = Astro.props as LayoutProps;
     <link rel="icon" href="/favicon.svg" />
 
     <!-- Non-blocking perf hints -->
-    <link rel="dns-prefetch" href="https://test.amrita-fashions.com" />
-    <link rel="preconnect" href="https://test.amrita-fashions.com" crossorigin />
+
+    {API_ORIGIN && (
+      <>
+        <link rel="dns-prefetch" href={API_ORIGIN} />
+        <link rel="preconnect" href={API_ORIGIN} crossorigin />
+      </>
+    )}
+
+    <!-- Cloudinary can stay static or you can move to env later if needed -->
     <link rel="dns-prefetch" href="https://res.cloudinary.com" />
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+
     <meta name="color-scheme" content="light dark" />
 
     <!-- Page-level SEO injection (extra meta/OG/Twitter) BEFORE scripts -->
